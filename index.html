@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>工程現勘線形比對系統</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body { background-color: #f3f4f6; font-family: system-ui, -apple-system, sans-serif; }
+        canvas { touch-action: none; }
+    </style>
+</head>
+<body class="text-gray-800 p-4 md:p-8">
+
+<div class="max-w-6xl mx-auto">
+    <header class="flex items-center gap-3 mb-6">
+        <i data-lucide="map" class="w-8 h-8 text-blue-600"></i>
+        <h1 class="text-2xl md:text-3xl font-bold text-gray-900">工程現勘線形比對系統</h1>
+        <span class="bg-blue-100 text-blue-800 text-sm font-medium px-2.5 py-0.5 rounded ml-auto">離線可用版</span>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <div class="lg:col-span-4 space-y-4">
+            
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+                <h3 class="font-bold text-lg mb-4 flex items-center gap-2">
+                    <i data-lucide="crosshair" class="w-5 h-5 text-red-500"></i> 實測點位 (測量儀器/GPS)
+                </h3>
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Easting (E)</label>
+                        <input type="number" id="inputE" value="300012.0" class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Northing (N)</label>
+                        <input type="number" id="inputN" value="2700012.0" class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Elevation (Z) - 實測高程</label>
+                        <input type="number" id="inputZ" value="16.5" class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+                <h3 class="font-bold text-lg mb-4 flex items-center gap-2">
+                    <i data-lucide="file-spreadsheet" class="w-5 h-5 text-green-600"></i> 設計資料 (CSV 格式)
+                </h3>
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">水平線形 (Station, Easting, Northing)</label>
+                        <textarea id="inputHz" rows="5" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-blue-500 focus:outline-none">
+0.0,300000.0,2700000.0
+10.0,300008.5,2700005.2
+20.0,300017.0,2700010.4
+30.0,300023.0,2700018.0
+40.0,300026.5,2700027.5</textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">縱斷面 (Station, Elevation)</label>
+                        <textarea id="inputVt" rows="4" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-blue-500 focus:outline-none">
+0.0,15.5
+20.0,16.0
+40.0,17.5</textarea>
+                    </div>
+                </div>
+                
+                <button id="calcBtn" class="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2">
+                    <i data-lucide="calculator" class="w-5 h-5"></i> 開始計算 (Calculate)
+                </button>
+            </div>
+        </div>
+
+        <div class="lg:col-span-8 flex flex-col gap-4">
+            
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                    <p class="text-sm text-gray-500 font-medium mb-1">投影里程 (Station)</p>
+                    <div class="flex items-end gap-1">
+                        <span class="text-2xl font-bold text-gray-900" id="resSta">--</span>
+                        <span class="text-sm text-gray-500 mb-1">m</span>
+                    </div>
+                </div>
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                    <p class="text-sm text-gray-500 font-medium mb-1">偏離距離 (Offset)</p>
+                    <div class="flex items-baseline gap-1">
+                        <span class="text-2xl font-bold" id="resOffset">--</span>
+                        <span class="text-sm text-gray-500">m</span>
+                    </div>
+                    <span class="text-xs font-semibold px-2 py-0.5 rounded mt-1 inline-block" id="resDir">--</span>
+                </div>
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                    <p class="text-sm text-gray-500 font-medium mb-1">設計高程 (Design Z)</p>
+                    <div class="flex items-end gap-1">
+                        <span class="text-2xl font-bold text-gray-900" id="resDesignZ">--</span>
+                        <span class="text-sm text-gray-500 mb-1">m</span>
+                    </div>
+                </div>
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                    <p class="text-sm text-gray-500 font-medium mb-1">填挖值 (Cut/Fill)</p>
+                    <div class="flex items-baseline gap-1">
+                        <span class="text-2xl font-bold" id="resCutFill">--</span>
+                        <span class="text-sm text-gray-500">m</span>
+                    </div>
+                    <span class="text-xs font-semibold px-2 py-0.5 rounded mt-1 inline-block" id="resCutFillType">--</span>
+                </div>
+            </div>
+
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex-grow flex flex-col">
+                <h3 class="font-bold text-lg mb-2 flex items-center gap-2">
+                    <i data-lucide="bar-chart-2" class="w-5 h-5 text-indigo-600"></i> 線形平面圖 (Plan View)
+                </h3>
+                <div class="flex gap-4 text-sm mb-3">
+                    <div class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-blue-600 inline-block"></span> 設計線形</div>
+                    <div class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-red-500 inline-block"></span> 實測點位</div>
+                    <div class="flex items-center gap-1"><span class="w-6 h-[2px] border-t-2 border-dashed border-red-500 inline-block"></span> 偏離距離</div>
+                </div>
+                <div class="relative w-full flex-grow bg-gray-50 rounded-lg border border-gray-200 overflow-hidden" style="min-height: 400px;">
+                    <canvas id="plotCanvas" class="absolute top-0 left-0 w-full h-full"></canvas>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    // 初始化 Lucide 圖標
+    lucide.createIcons();
+
+    // 取得 DOM 元素
+    const canvas = document.getElementById('plotCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // 解析 CSV 文字的輔助函數
+    function parseCSV(text, expectedCols) {
+        const lines = text.trim().split('\n');
+        const data = [];
+        for (let line of lines) {
+            let parts = line.split(',').map(s => parseFloat(s.trim()));
+            if (parts.length >= expectedCols && !isNaN(parts[0])) {
+                data.push(parts);
+            }
+        }
+        return data;
+    }
+
+    // 核心運算：等同 Python 的 Shapely + Scipy 邏輯
+    function calculateAlignment() {
+        try {
+            // 1. 讀取與解析資料
+            const ptE = parseFloat(document.getElementById('inputE').value);
+            const ptN = parseFloat(document.getElementById('inputN').value);
+            const ptZ = parseFloat(document.getElementById('inputZ').value);
+
+            const hzRaw = parseCSV(document.getElementById('inputHz').value, 3);
+            const vtRaw = parseCSV(document.getElementById('inputVt').value, 2);
+
+            if (hzRaw.length < 2) throw new Error("水平線形至少需要兩個點");
+            
+            const hzData = hzRaw.map(r => ({ sta: r[0], e: r[1], n: r[2] }));
+            const vtData = vtRaw.map(r => ({ sta: r[0], z: r[1] }));
+
+            // 2. 尋找最近線段並計算投影與偏離 (Shapely logic)
+            let minSqDist = Infinity;
+            let bestSta = 0;
+            let bestProjE = 0, bestProjN = 0;
+            let bestOffset = 0;
+
+            for (let i = 0; i < hzData.length - 1; i++) {
+                let p1 = hzData[i];
+                let p2 = hzData[i+1];
+
+                // 線段向量
+                let vx = p2.e - p1.e;
+                let vy = p2.n - p1.n;
+                let len2 = vx*vx + vy*vy;
+                
+                // 測試點向量
+                let wx = ptE - p1.e;
+                let wy = ptN - p1.n;
+
+                // 投影比例 t (0~1)
+                let t = Math.max(0, Math.min(1, (wx * vx + wy * vy) / len2));
+                
+                // 投影點座標
+                let projE = p1.e + t * vx;
+                let projN = p1.n + t * vy;
+
+                // 測試點到投影點距離平方
+                let dx = ptE - projE;
+                let dy = ptN - projN;
+                let sqDist = dx*dx + dy*dy;
+
+                if (sqDist < minSqDist) {
+                    minSqDist = sqDist;
+                    
+                    // 計算真實里程 (Station)
+                    // 假設 station 是連續且線性的
+                    let segmentLen = Math.sqrt(len2);
+                    bestSta = p1.sta + t * (p2.sta - p1.sta); 
+                    
+                    bestProjE = projE;
+                    bestProjN = projN;
+
+                    // 判斷偏左/偏右 (叉積計算 Cross Product: vx*wy - vy*wx)
+                    let crossProduct = (vx * wy) - (vy * wx);
+                    let absOffset = Math.sqrt(sqDist);
+                    // 根據 Python 腳本定義：大於0為左(-)，小於0為右(+)
+                    bestOffset = crossProduct > 0 ? -absOffset : absOffset;
+                }
+            }
+
+            // 3. 高程內插 (Scipy linear interp1d logic)
+            let designZ = 0;
+            if (vtData.length > 0) {
+                // 外插與內插處理
+                if (bestSta <= vtData[0].sta) {
+                    designZ = vtData[0].z; // 簡單處理，低於起點取起點高程
+                } else if (bestSta >= vtData[vtData.length-1].sta) {
+                    designZ = vtData[vtData.length-1].z;
+                } else {
+                    for (let i = 0; i < vtData.length - 1; i++) {
+                        if (bestSta >= vtData[i].sta && bestSta <= vtData[i+1].sta) {
+                            let s1 = vtData[i].sta, s2 = vtData[i+1].sta;
+                            let z1 = vtData[i].z, z2 = vtData[i+1].z;
+                            designZ = z1 + (z2 - z1) * (bestSta - s1) / (s2 - s1);
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            let cutFill = ptZ - designZ;
+
+            // 4. 更新 UI 面板
+            document.getElementById('resSta').textContent = bestSta.toFixed(3);
+            
+            const offsetEl = document.getElementById('resOffset');
+            const dirEl = document.getElementById('resDir');
+            offsetEl.textContent = bestOffset.toFixed(3);
+            if (bestOffset < 0) {
+                offsetEl.className = "text-2xl font-bold text-red-600";
+                dirEl.textContent = "偏左 (Left)";
+                dirEl.className = "text-xs font-semibold px-2 py-0.5 rounded mt-1 inline-block bg-red-100 text-red-700";
+            } else {
+                offsetEl.className = "text-2xl font-bold text-emerald-600";
+                dirEl.textContent = "偏右 (Right)";
+                dirEl.className = "text-xs font-semibold px-2 py-0.5 rounded mt-1 inline-block bg-emerald-100 text-emerald-700";
+            }
+
+            document.getElementById('resDesignZ').textContent = designZ.toFixed(3);
+            
+            const cfEl = document.getElementById('resCutFill');
+            const cfTypeEl = document.getElementById('resCutFillType');
+            cfEl.textContent = cutFill.toFixed(3);
+            if (cutFill > 0) {
+                cfEl.className = "text-2xl font-bold text-orange-600";
+                cfTypeEl.textContent = "挖方 (Cut)";
+                cfTypeEl.className = "text-xs font-semibold px-2 py-0.5 rounded mt-1 inline-block bg-orange-100 text-orange-700";
+            } else {
+                cfEl.className = "text-2xl font-bold text-indigo-600";
+                cfTypeEl.textContent = "填方 (Fill)";
+                cfTypeEl.className = "text-xs font-semibold px-2 py-0.5 rounded mt-1 inline-block bg-indigo-100 text-indigo-700";
+            }
+
+            // 5. 繪製圖表 (Matplotlib 等效功能)
+            drawPlot(hzData, {e: ptE, n: ptN}, {e: bestProjE, n: bestProjN});
+
+        } catch (err) {
+            alert("計算錯誤: " + err.message + "\n請確認輸入格式。");
+        }
+    }
+
+    // 繪製與 Matplotlib 'equal' axis 相同的平面圖
+    function drawPlot(hzData, testPt, projPt) {
+        // 設定 Canvas 解析度以適配高 DPI 螢幕
+        const rect = canvas.parentElement.getBoundingClientRect();
+        canvas.width = rect.width * window.devicePixelRatio;
+        canvas.height = rect.height * window.devicePixelRatio;
+        ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+        const w = rect.width;
+        const h = rect.height;
+
+        // 清空畫布
+        ctx.clearRect(0, 0, w, h);
+
+        // 尋找邊界以設定縮放比例 (Bounding Box)
+        let minE = Math.min(...hzData.map(d => d.e), testPt.e);
+        let maxE = Math.max(...hzData.map(d => d.e), testPt.e);
+        let minN = Math.min(...hzData.map(d => d.n), testPt.n);
+        let maxN = Math.max(...hzData.map(d => d.n), testPt.n);
+
+        // 加上 padding
+        const padE = (maxE - minE) * 0.2 || 10;
+        const padN = (maxN - minN) * 0.2 || 10;
+        minE -= padE; maxE += padE;
+        minN -= padN; maxN += padN;
+
+        // 等比例縮放 (axis equal)
+        const rangeE = maxE - minE;
+        const rangeN = maxN - minN;
+        const scale = Math.min(w / rangeE, h / rangeN);
+
+        // 置中偏移
+        const offsetX = (w - rangeE * scale) / 2;
+        const offsetY = (h - rangeN * scale) / 2;
+
+        // 座標轉換函數 (將現實 E,N 轉為 Canvas 的 x,y，注意 N 越大在螢幕上越靠上)
+        const getX = (e) => offsetX + (e - minE) * scale;
+        const getY = (n) => h - (offsetY + (n - minN) * scale);
+
+        // 畫網格 (Grid)
+        ctx.strokeStyle = '#e5e7eb';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 4]);
+        for(let i=0; i<=5; i++) {
+            let y = h/5 * i;
+            let x = w/5 * i;
+            ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+        }
+        ctx.setLineDash([]);
+
+        // 1. 畫設計線形 (藍色實線)
+        ctx.beginPath();
+        ctx.strokeStyle = '#2563eb';
+        ctx.lineWidth = 3;
+        hzData.forEach((p, i) => {
+            if (i === 0) ctx.moveTo(getX(p.e), getY(p.n));
+            else ctx.lineTo(getX(p.e), getY(p.n));
+        });
+        ctx.stroke();
+
+        // 畫設計線形的節點 (藍色圓點)
+        ctx.fillStyle = '#2563eb';
+        hzData.forEach(p => {
+            ctx.beginPath();
+            ctx.arc(getX(p.e), getY(p.n), 5, 0, Math.PI * 2);
+            ctx.fill();
+        });
+
+        // 2. 畫投影偏離距離 (紅色虛線)
+        ctx.beginPath();
+        ctx.strokeStyle = '#ef4444';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 5]);
+        ctx.moveTo(getX(testPt.e), getY(testPt.n));
+        ctx.lineTo(getX(projPt.e), getY(projPt.n));
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // 3. 畫實測點位 (紅色大圓點)
+        ctx.beginPath();
+        ctx.fillStyle = '#ef4444';
+        ctx.arc(getX(testPt.e), getY(testPt.n), 8, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // 幫紅點加上白色外框增加對比
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#ffffff';
+        ctx.stroke();
+    }
+
+    // 綁定按鈕事件
+    document.getElementById('calcBtn').addEventListener('click', calculateAlignment);
+
+    // 視窗縮放時重新繪圖以符合容器大小
+    window.addEventListener('resize', () => {
+        // 使用 setTimeout 避免 resize 觸發過於頻繁
+        clearTimeout(window.resizeTimer);
+        window.resizeTimer = setTimeout(calculateAlignment, 100);
+    });
+
+    // 初始化時先執行一次運算，展現圖表
+    window.onload = calculateAlignment;
+
+</script>
+</body>
+</html>
